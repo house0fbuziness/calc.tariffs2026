@@ -1,0 +1,471 @@
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор стоимости бухгалтерских услуг</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #f0f2f5; color: #1a1a2e; line-height: 1.5; padding: 20px; }
+  .header { max-width: 1240px; margin: 0 auto 20px; }
+  h1 { font-size: 1.5rem; color: #16213e; margin-bottom: 6px; }
+  .subtitle { color: #6b7280; font-size: 0.9rem; }
+  .main { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start; }
+  @media (max-width: 900px) { .main { grid-template-columns: 1fr; } .sidebar { position: static !important; } }
+  .panel { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+  fieldset { border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+  legend { font-weight: 600; color: #16213e; padding: 0 8px; font-size: 0.95rem; }
+  .radio-group { display: flex; flex-wrap: wrap; gap: 10px; }
+  .radio-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: 0.15s; }
+  .radio-item:hover { border-color: #93c5fd; }
+  .radio-item input { accent-color: #2563eb; }
+  select, input[type="number"] { width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; background: #fff; }
+  select:focus, input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+  .pkg-row { display: grid; grid-template-columns: 1fr 130px; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+  .pkg-row:last-child { border-bottom: none; }
+  .pkg-name { font-size: 0.9rem; color: #374151; }
+  .pkg-row input[type="number"] { padding: 6px 8px; font-size: 0.85rem; }
+  .checkbox-label { display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer; }
+  .checkbox-label input { width: 18px; height: 18px; accent-color: #2563eb; }
+  .sidebar { position: sticky; top: 24px; background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+  .sidebar h2 { font-size: 1.1rem; color: #16213e; margin-bottom: 16px; }
+  .sum-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.88rem; border-bottom: 1px solid #f3f4f6; }
+  .sum-row:last-child { border-bottom: none; }
+  .sum-row .label { color: #6b7280; }
+  .sum-row .value { font-weight: 500; color: #16213e; text-align: right; }
+  .sum-total { margin-top: 14px; padding-top: 14px; border-top: 2px solid #2563eb; display: flex; justify-content: space-between; align-items: baseline; }
+  .sum-total .label { font-size: 0.9rem; color: #374151; font-weight: 600; }
+  .sum-total .value { font-size: 1.6rem; font-weight: 700; color: #2563eb; }
+  .sum-year { margin-top: 8px; font-size: 0.85rem; color: #6b7280; text-align: right; }
+  .btn-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .btn { padding: 11px 16px; border: none; border-radius: 8px; font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: 0.15s; flex: 1; min-width: 130px; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-secondary { background: #fff; color: #2563eb; border: 1px solid #bfdbfe; }
+  .btn-secondary:hover { background: #eff6ff; }
+  .status { margin-top: 12px; font-size: 0.82rem; color: #6b7280; min-height: 1.2em; }
+  .status.error { color: #b91c1c; }
+  .status.success { color: #15803d; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Калькулятор стоимости бухгалтерских услуг</h1>
+  <p class="subtitle">ИП Ретунская Елена Валериевна · vipbuch.ru</p>
+</div>
+
+<div class="main">
+  <div class="panel">
+    <fieldset>
+      <legend>1. Организационная форма</legend>
+      <div class="radio-group" id="formGroup">
+        <label class="radio-item"><input type="radio" name="orgform" value="ooo" checked> ООО, АО, ЗАО</label>
+        <label class="radio-item"><input type="radio" name="orgform" value="ip"> ИП</label>
+        <label class="radio-item"><input type="radio" name="orgform" value="nko"> НКО, Фонды, СНТ</label>
+        <label class="radio-item"><input type="radio" name="orgform" value="adv"> Объединение адвокатов</label>
+      </div>
+    </fieldset>
+
+    <fieldset id="activityFieldset">
+      <legend>2. Вид деятельности</legend>
+      <div class="radio-group" id="activityGroup">
+        <label class="radio-item"><input type="radio" name="activity" value="services" checked> Услуги</label>
+        <label class="radio-item"><input type="radio" name="activity" value="trade"> Торговля</label>
+        <label class="radio-item"><input type="radio" name="activity" value="prod"> Производство, строительство</label>
+        <label class="radio-item"><input type="radio" name="activity" value="seller"> Селлеры</label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>3. Система налогообложения</legend>
+      <select id="sno"></select>
+    </fieldset>
+
+    <fieldset>
+      <legend>4. Обработка документов</legend>
+      <div class="pkg-row">
+        <span class="pkg-name">Дополнительные расчётные счета (1 100 ₽/шт.)</span>
+        <input type="number" id="extraAccounts" min="0" value="0">
+      </div>
+      <div class="pkg-row">
+        <span class="pkg-name">Кассы (1 100 ₽/шт.)</span>
+        <input type="number" id="cashRegisters" min="0" value="0">
+      </div>
+      <div class="pkg-row" id="patentsRow">
+        <span class="pkg-name">Патенты ИП (1 100 ₽/шт.)</span>
+        <input type="number" id="patents" min="0" value="0">
+      </div>
+      <div class="pkg-row">
+        <span class="pkg-name">Хозяйственные операции (55 ₽/шт.)</span>
+        <input type="number" id="operations" min="0" value="0">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>5. Пакеты услуг</legend>
+
+      <div style="margin-bottom:10px;">
+        <label style="font-weight:600; display:block; margin-bottom:6px;">Зарплата и кадры</label>
+        <div class="radio-group" style="margin-bottom:8px;">
+          <label class="radio-item"><input type="radio" name="salary" value="none" checked> Не нужно</label>
+          <label class="radio-item"><input type="radio" name="salary" value="std"> Стандартный</label>
+          <label class="radio-item"><input type="radio" name="salary" value="prem"> Премиум</label>
+        </div>
+        <div class="pkg-row" id="salaryStdRow" style="display:none;">
+          <span class="pkg-name">Сотрудников (Стандартный):</span>
+          <input type="number" id="salaryStdCount" min="1" value="1">
+        </div>
+        <div class="pkg-row" id="salaryPremRow" style="display:none;">
+          <span class="pkg-name">Сотрудников (Премиум):</span>
+          <input type="number" id="salaryPremCount" min="1" value="1">
+        </div>
+      </div>
+
+      <div class="pkg-row">
+        <label class="checkbox-label" style="margin:0;"><input type="checkbox" id="pkgPrimary"> Первичный документ</label>
+        <input type="number" id="pkgPrimaryCount" min="1" value="1" placeholder="док.">
+      </div>
+      <div class="pkg-row">
+        <label class="checkbox-label" style="margin:0;"><input type="checkbox" id="pkgEaeu"> Статистика ЕАЭС</label>
+        <input type="number" id="pkgEaeuCount" min="1" value="1" placeholder="док.">
+      </div>
+      <div class="pkg-row">
+        <label class="checkbox-label" style="margin:0;"><input type="checkbox" id="pkgCollect"> Сбор первичных документов</label>
+        <input type="number" id="pkgCollectCount" min="1" value="1" placeholder="контр.">
+      </div>
+      <div class="pkg-row">
+        <label class="checkbox-label" style="margin:0;"><input type="checkbox" id="pkgTreasury"> Казначейство</label>
+        <input type="number" id="pkgTreasuryCount" min="1" value="1" placeholder="поруч.">
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="sidebar">
+    <h2>Итого</h2>
+    <div id="sumDetails"></div>
+    <div class="sum-total">
+      <span class="label">В месяц:</span>
+      <span class="value" id="totalMonth">0 ₽</span>
+    </div>
+    <div class="sum-year" id="totalYear">В год: 0 ₽</div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-primary" id="btnPdf">Скачать КП</button>
+      <button type="button" class="btn btn-secondary" id="btnCopy">Скопировать</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var M = function (id) { return document.getElementById(id); };
+
+  /* ---------- ТАРИФЫ (в месяц, ₽) ---------- */
+  var TARIFFS = {
+    ooo: {
+      services: { usn_d: 7000, usn_dr: 8000, ausn_d: 7000, ausn_dr: 8000, osno: 8900 },
+      trade:    { usn_d: 7500, usn_dr: 8500, ausn_d: 7500, ausn_dr: 8500, osno: 9500 },
+      prod:     { usn_d: 7800, usn_dr: 8800, ausn_d: 7800, ausn_dr: 8800, osno: 9700 },
+      seller:   { usn_d: 7800, usn_dr: 8800, ausn_d: 7800, ausn_dr: 8800, osno: 9700 }
+    },
+    ip: {
+      services: { patent: 5400, usn_d: 5400, usn_dr: 6500, ausn_d: 5400, ausn_dr: 6500, osno: 7300 },
+      trade:    { patent: 6000, usn_d: 6000, usn_dr: 7100, ausn_d: 6000, ausn_dr: 7100, osno: 7900 },
+      prod:     { patent: 6300, usn_d: 6300, usn_dr: 7300, ausn_d: 6300, ausn_dr: 7300, osno: 8200 },
+      seller:   { patent: 6300, usn_d: 6300, usn_dr: 7300, ausn_d: 6300, ausn_dr: 7300, osno: 8200 }
+    },
+    nko: { usn_d: 7000, usn_dr: 8000, osno: 8900 },
+    adv: { usn_d: 7000, usn_dr: 8000, osno: 8900 }
+  };
+
+  var SNO_LABELS = {
+    usn_d: 'УСН (доходы)', usn_dr: 'УСН (доходы-расходы)',
+    ausn_d: 'АУСН (доходы)', ausn_dr: 'АУСН (доходы-расходы)',
+    osno: 'ОСНО', patent: 'Патент'
+  };
+  var FORM_LABELS = { ooo: 'ООО, АО, ЗАО', ip: 'ИП', nko: 'НКО, Фонды, СНТ', adv: 'Объединение адвокатов' };
+  var ACTIVITY_LABELS = { services: 'Услуги', trade: 'Торговля', prod: 'Производство, строительство', seller: 'Селлеры' };
+
+  /* ---------- Пакеты ---------- */
+  function calcSalaryStd(c) { if (c<=0) return 0; if (c<=5) return 4000; if (c<=10) return 8000; return 8000+(c-10)*800; }
+  function calcSalaryPrem(c) {
+    if (c<=0) return 0; if (c<=5) return 5600; if (c<=10) return 11500;
+    if (c<=20) return 23000; if (c<=50) return 51600; return 51600+(c-50)*600;
+  }
+  function calcPrimary(c) { if (c<=0) return 0; if (c<=20) return 4500; if (c<=50) return 9100; if (c<=100) return 16000; return 16000+(c-100)*160; }
+  function calcEaeu(c) { if (c<=0) return 0; if (c<=5) return 6600; if (c<=10) return 13200; if (c<=20) return 23100; return 23100+(c-20)*1100; }
+  function calcCollect(c) { if (c<=0) return 0; if (c<=20) return 5000; if (c<=50) return 10000; if (c<=100) return 16000; return 16000+(c-100)*140; }
+  function calcTreasury(c) { if (c<=0) return 0; if (c<=10) return 3350; if (c<=20) return 6800; if (c<=50) return 13600; if (c<=100) return 20600; return 20600+(c-100)*206; }
+
+  function fmt(n) { return new Intl.NumberFormat('ru-RU').format(Math.round(n)) + ' ₽'; }
+  function getForm() { var e = document.querySelector('input[name="orgform"]:checked'); return e ? e.value : 'ooo'; }
+  function getActivity() { var e = document.querySelector('input[name="activity"]:checked'); return e ? e.value : 'services'; }
+  function getSalaryType() { var e = document.querySelector('input[name="salary"]:checked'); return e ? e.value : 'none'; }
+
+  function rebuildSno() {
+    var form = getForm();
+    var select = M('sno');
+    select.innerHTML = '';
+    var options = [];
+    if (form === 'ooo') options = ['usn_d','usn_dr','ausn_d','ausn_dr','osno'];
+    else if (form === 'ip') options = ['patent','usn_d','usn_dr','ausn_d','ausn_dr','osno'];
+    else options = ['usn_d','usn_dr','osno'];
+    options.forEach(function (key) {
+      var o = document.createElement('option');
+      o.value = key; o.textContent = SNO_LABELS[key];
+      select.appendChild(o);
+    });
+    M('activityFieldset').style.display = (form === 'nko' || form === 'adv') ? 'none' : '';
+    M('patentsRow').style.display = (form === 'ip') ? '' : 'none';
+    if (form !== 'ip') M('patents').value = 0;
+    recalc();
+  }
+
+  function row(label, value) {
+    return '<div class="sum-row"><span class="label">' + label + '</span><span class="value">' + value + '</span></div>';
+  }
+
+  function recalc() {
+    var form = getForm();
+    var activity = getActivity();
+    var sno = M('sno').value;
+
+    var base = 0;
+    if (form === 'ooo' || form === 'ip') {
+      base = (TARIFFS[form][activity] && TARIFFS[form][activity][sno]) || 0;
+    } else {
+      base = TARIFFS[form][sno] || 0;
+    }
+
+    var extraAcc = parseInt(M('extraAccounts').value) || 0;
+    var cashReg = parseInt(M('cashRegisters').value) || 0;
+    var patents = parseInt(M('patents').value) || 0;
+    var ops = parseInt(M('operations').value) || 0;
+    var sumExtraAcc = extraAcc * 1100;
+    var sumCash = cashReg * 1100;
+    var sumPatents = patents * 1100;
+    var sumOps = ops * 55;
+
+    var salaryType = getSalaryType();
+    var salarySum = 0, salaryLabel = '';
+    if (salaryType === 'std') { var c1 = parseInt(M('salaryStdCount').value)||0; salarySum = calcSalaryStd(c1); salaryLabel = 'Зарплата и кадры Стандартный ('+c1+' сотр.)'; }
+    else if (salaryType === 'prem') { var c2 = parseInt(M('salaryPremCount').value)||0; salarySum = calcSalaryPrem(c2); salaryLabel = 'Зарплата и кадры Премиум ('+c2+' сотр.)'; }
+
+    var p1S=0,p1L='',p2S=0,p2L='',p3S=0,p3L='',p4S=0,p4L='';
+    if (M('pkgPrimary').checked) { var c=parseInt(M('pkgPrimaryCount').value)||0; p1S=calcPrimary(c); p1L='Первичный документ ('+c+' док.)'; }
+    if (M('pkgEaeu').checked) { var c=parseInt(M('pkgEaeuCount').value)||0; p2S=calcEaeu(c); p2L='Статистика ЕАЭС ('+c+' док.)'; }
+    if (M('pkgCollect').checked) { var c=parseInt(M('pkgCollectCount').value)||0; p3S=calcCollect(c); p3L='Сбор первичных документов ('+c+' контр.)'; }
+    if (M('pkgTreasury').checked) { var c=parseInt(M('pkgTreasuryCount').value)||0; p4S=calcTreasury(c); p4L='Казначейство ('+c+' поруч.)'; }
+
+    var total = base + sumExtraAcc + sumCash + sumPatents + sumOps + salarySum + p1S + p2S + p3S + p4S;
+
+    var html = '';
+    html += row('Форма', FORM_LABELS[form]);
+    if (form === 'ooo' || form === 'ip') html += row('Деятельность', ACTIVITY_LABELS[activity]);
+    html += row('СНО', SNO_LABELS[sno] || '—');
+    html += row('База', fmt(base));
+    if (sumExtraAcc > 0) html += row('Доп. счета × '+extraAcc, fmt(sumExtraAcc));
+    if (sumCash > 0) html += row('Кассы × '+cashReg, fmt(sumCash));
+    if (sumPatents > 0) html += row('Патенты × '+patents, fmt(sumPatents));
+    if (sumOps > 0) html += row('Хоз. операции × '+ops, fmt(sumOps));
+    if (salarySum > 0) html += row(salaryLabel, fmt(salarySum));
+    if (p1S > 0) html += row(p1L, fmt(p1S));
+    if (p2S > 0) html += row(p2L, fmt(p2S));
+    if (p3S > 0) html += row(p3L, fmt(p3S));
+    if (p4S > 0) html += row(p4L, fmt(p4S));
+    M('sumDetails').innerHTML = html;
+
+    M('totalMonth').textContent = fmt(total);
+    M('totalYear').textContent = 'В год: ' + fmt(total * 12);
+
+    window._KP = {
+      form: form, formLabel: FORM_LABELS[form],
+      activity: activity, activityLabel: ACTIVITY_LABELS[activity],
+      sno: sno, snoLabel: SNO_LABELS[sno],
+      base: base,
+      extraAcc: extraAcc, sumExtraAcc: sumExtraAcc,
+      cashReg: cashReg, sumCash: sumCash,
+      patents: patents, sumPatents: sumPatents,
+      ops: ops, sumOps: sumOps,
+      salaryType: salaryType, salarySum: salarySum, salaryLabel: salaryLabel,
+      p1S: p1S, p1L: p1L, p2S: p2S, p2L: p2L, p3S: p3S, p3L: p3L, p4S: p4S, p4L: p4L,
+      total: total, totalYear: total * 12
+    };
+  }
+
+  /* ---------- Подписки ---------- */
+  document.querySelectorAll('input[name="orgform"]').forEach(function (el) { el.addEventListener('change', rebuildSno); });
+  document.querySelectorAll('input[name="activity"]').forEach(function (el) { el.addEventListener('change', recalc); });
+  document.querySelectorAll('input[name="salary"]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      var t = getSalaryType();
+      M('salaryStdRow').style.display = (t === 'std') ? '' : 'none';
+      M('salaryPremRow').style.display = (t === 'prem') ? '' : 'none';
+      recalc();
+    });
+  });
+  M('sno').addEventListener('change', recalc);
+  ['extraAccounts','cashRegisters','patents','operations','salaryStdCount','salaryPremCount','pkgPrimaryCount','pkgEaeuCount','pkgCollectCount','pkgTreasuryCount'].forEach(function (id) { M(id).addEventListener('input', recalc); });
+  ['pkgPrimary','pkgEaeu','pkgCollect','pkgTreasury'].forEach(function (id) { M(id).addEventListener('change', recalc); });
+
+  /* ---------- PDF ---------- */
+  function buildPdf() {
+    var kp = window._KP;
+    if (!kp) throw new Error('Нет данных');
+    if (typeof jspdf === 'undefined' || !jspdf.jsPDF) throw new Error('jsPDF не загружен');
+
+    var doc = new jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    var pageW = 210, marginL = 15, marginR = 15, y = 20;
+
+    doc.setFontSize(14);
+    doc.text('Коммерческое предложение', marginL, y); y += 8;
+    doc.setFontSize(10);
+    doc.text('ИП Ретунская Елена Валериевна', marginL, y); y += 5;
+    doc.text('ИНН 312801508644 · ОГРНИП 313312828200030', marginL, y); y += 5;
+    doc.text('309512, Белгородская обл., г. Старый Оскол, мкр. Жукова, д. 29а, кв. 54', marginL, y); y += 5;
+    doc.text('Тел.: +7 (910) 736-95-60 · E-mail: vipbuch78@inbox.ru · vipbuch.ru', marginL, y); y += 10;
+
+    var now = new Date();
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text('Дата: ' + now.getDate() + '.' + (now.getMonth()+1) + '.' + now.getFullYear(), marginL, y);
+    doc.setTextColor(0);
+    y += 10;
+
+    doc.setFontSize(11);
+    doc.text('Параметры', marginL, y); y += 6;
+    doc.setFontSize(10);
+    doc.text('Форма: ' + kp.formLabel, marginL, y); y += 5.5;
+    if (kp.form === 'ooo' || kp.form === 'ip') { doc.text('Деятельность: ' + kp.activityLabel, marginL, y); y += 5.5; }
+    doc.text('СНО: ' + kp.snoLabel, marginL, y); y += 8;
+
+    doc.setFontSize(11);
+    doc.text('Расчёт', marginL, y); y += 6;
+    doc.setFontSize(10);
+
+    function line(label, value) {
+      doc.text(label, marginL, y);
+      doc.text(value, pageW - marginR, y, { align: 'right' });
+      y += 5.5;
+    }
+    line('Базовая стоимость', fmt(kp.base));
+    if (kp.sumExtraAcc > 0) line('Доп. счета × ' + kp.extraAcc, fmt(kp.sumExtraAcc));
+    if (kp.sumCash > 0) line('Кассы × ' + kp.cashReg, fmt(kp.sumCash));
+    if (kp.sumPatents > 0) line('Патенты × ' + kp.patents, fmt(kp.sumPatents));
+    if (kp.sumOps > 0) line('Хоз. операции × ' + kp.ops, fmt(kp.sumOps));
+    if (kp.salarySum > 0) line(kp.salaryLabel, fmt(kp.salarySum));
+    if (kp.p1S > 0) line(kp.p1L, fmt(kp.p1S));
+    if (kp.p2S > 0) line(kp.p2L, fmt(kp.p2S));
+    if (kp.p3S > 0) line(kp.p3L, fmt(kp.p3S));
+    if (kp.p4S > 0) line(kp.p4L, fmt(kp.p4S));
+
+    y += 2;
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(0.5);
+    doc.line(marginL, y, pageW - marginR, y);
+    y += 6;
+    doc.setFontSize(11);
+    doc.text('ИТОГО в месяц:', marginL, y);
+    doc.text(fmt(kp.total), pageW - marginR, y, { align: 'right' });
+    y += 6;
+    doc.setFontSize(10);
+    doc.text('ИТОГО в год:', marginL, y);
+    doc.text(fmt(kp.totalYear), pageW - marginR, y, { align: 'right' });
+    y += 10;
+
+    doc.setFontSize(11);
+    doc.text('Условия оплаты', marginL, y); y += 6;
+    doc.setFontSize(10);
+    doc.text('1. Оплата авансом до начала оказания услуг, но не позднее 3-го числа месяца.', marginL, y); y += 5;
+    doc.text('2. Счёт оплачивается в течение 3 рабочих дней с момента получения.', marginL, y); y += 5;
+    doc.text('3. Стоимость закрепляется на 1 год. Через год стоимость повышается на 20%.', marginL, y); y += 5;
+    doc.text('4. Уведомление о повышении направляется не менее чем за 2 месяца.', marginL, y); y += 8;
+
+    doc.setFontSize(11);
+    doc.text('Что не включено', marginL, y); y += 6;
+    doc.setFontSize(10);
+    doc.text('· Восстановление учёта за прошлые периоды.', marginL, y); y += 5;
+    doc.text('· Формирование недостающих первичных документов.', marginL, y); y += 5;
+    doc.text('· Сдача уточнённой отчётности за прошлые периоды.', marginL, y); y += 5;
+    doc.text('· Складской учёт.', marginL, y); y += 5;
+    doc.text('· Ответы на встречные налоговые проверки.', marginL, y); y += 8;
+
+    doc.setFontSize(11);
+    doc.text('Обязательные условия', marginL, y); y += 6;
+    doc.setFontSize(10);
+    doc.text('1. Учёт ведётся в 1С Бухгалтерия (300 ₽/мес.).', marginL, y); y += 5;
+    doc.text('2. Учёт по РСБУ (Экстерн, 300 ₽/мес.).', marginL, y); y += 5;
+    doc.text('3. Доступ к расчётному счёту (Клиент-Банк) и личному кабинету ОФД.', marginL, y); y += 5;
+    doc.text('4. Синхронизация данных с 1С — не реже 2 раз в месяц.', marginL, y); y += 8;
+
+    doc.setFontSize(11);
+    doc.text('Контакты', marginL, y); y += 6;
+    doc.setFontSize(10);
+    doc.text('ИП Ретунская Елена Валериевна', marginL, y); y += 5;
+    doc.text('+7 (910) 736-95-60 · vipbuch78@inbox.ru · vipbuch.ru', marginL, y);
+
+    return doc;
+  }
+
+  M('btnPdf').addEventListener('click', function () {
+    var st = M('status');
+    st.className = 'status';
+    st.textContent = 'Формирование PDF...';
+    try {
+      var doc = buildPdf();
+      var kp = window._KP;
+      var fname = 'KP_' + (kp.snoLabel||'tarif') + '_' + (kp.formLabel||'') + '.pdf';
+      fname = fname.replace(/[\\/:*?"<>|]/g, '_');
+      doc.save(fname);
+      st.className = 'status success';
+      st.textContent = 'Готово: ' + fname;
+    } catch (err) {
+      console.error(err);
+      st.className = 'status error';
+      st.textContent = 'Ошибка: ' + err.message;
+    }
+  });
+
+  /* ---------- Копирование ---------- */
+  M('btnCopy').addEventListener('click', function () {
+    var kp = window._KP;
+    if (!kp) return;
+    var t = 'Коммерческое предложение\nИП Ретунская Елена Валериевна · vipbuch.ru\n\n';
+    t += 'Форма: ' + kp.formLabel + '\n';
+    if (kp.form === 'ooo' || kp.form === 'ip') t += 'Деятельность: ' + kp.activityLabel + '\n';
+    t += 'СНО: ' + kp.snoLabel + '\n\n';
+    t += 'База: ' + fmt(kp.base) + '\n';
+    if (kp.sumExtraAcc > 0) t += 'Доп. счета × ' + kp.extraAcc + ': ' + fmt(kp.sumExtraAcc) + '\n';
+    if (kp.sumCash > 0) t += 'Кассы × ' + kp.cashReg + ': ' + fmt(kp.sumCash) + '\n';
+    if (kp.sumPatents > 0) t += 'Патенты × ' + kp.patents + ': ' + fmt(kp.sumPatents) + '\n';
+    if (kp.sumOps > 0) t += 'Хоз. операции × ' + kp.ops + ': ' + fmt(kp.sumOps) + '\n';
+    if (kp.salarySum > 0) t += kp.salaryLabel + ': ' + fmt(kp.salarySum) + '\n';
+    if (kp.p1S > 0) t += kp.p1L + ': ' + fmt(kp.p1S) + '\n';
+    if (kp.p2S > 0) t += kp.p2L + ': ' + fmt(kp.p2S) + '\n';
+    if (kp.p3S > 0) t += kp.p3L + ': ' + fmt(kp.p3S) + '\n';
+    if (kp.p4S > 0) t += kp.p4L + ': ' + fmt(kp.p4S) + '\n';
+    t += '\nИТОГО в месяц: ' + fmt(kp.total) + '\nИТОГО в год: ' + fmt(kp.totalYear) + '\n';
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(function () {
+        M('status').className = 'status success';
+        M('status').textContent = 'Скопировано';
+      }, function () {
+        M('status').className = 'status error';
+        M('status').textContent = 'Не удалось скопировать';
+      });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = t; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); M('status').className='status success'; M('status').textContent='Скопировано'; }
+      catch (e) { M('status').className='status error'; M('status').textContent='Скопируйте вручную'; }
+      document.body.removeChild(ta);
+    }
+  });
+
+  rebuildSno();
+})();
+</script>
+</body>
+</html>
