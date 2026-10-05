@@ -466,4 +466,6 @@ function validate(){if($('#hp').value)return false;let first=null;
 ['input','change'].forEach(ev=>document.addEventListener(ev,e=>{if(e.target.id&&document.getElementById('e_'+e.target.id))setErr(e.target.id,'')}));
 ['name','inn','person','mail','tel','msg'].forEach(id=>{const l=document.querySelector('label[for='+id+']');if(l)l.insertAdjacentHTML('beforeend',' <span style="color:#b3261e">*</span>')});
 fill();
+if(window.parent!==window){const ph=()=>parent.postMessage({calcHeight:Math.ceil(document.documentElement.getBoundingClientRect().height)},'*');
+ new ResizeObserver(ph).observe(document.body);addEventListener('load',ph);ph()}
 </script></body></html>
