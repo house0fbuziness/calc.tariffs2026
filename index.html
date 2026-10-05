@@ -27,6 +27,9 @@ button{font:inherit;font-weight:600;padding:14px 16px;border:0;border-radius:4px
 button.g{background:#fff;color:var(--ink);border:1px solid #bfc7d0;margin-top:8px}
 :focus-visible{outline:3px solid #f0b34a;outline-offset:1px}
 .bar{display:none}
+.err{color:#b3261e;font-size:14px;margin-top:4px;flex-basis:100%}input.bad,select.bad{border-color:#b3261e;background:#fff7f6}
+.agr{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:flex-start;margin-top:14px;font-size:14.5px;color:var(--mut);line-height:1.4}
+.agr input{width:20px;height:20px;margin:1px 0 0;flex:none}.agr label{flex:1;margin:0;font-size:14.5px}.agr a{color:var(--acc);font-weight:600}
 .note a{color:var(--acc);font-weight:600}
 .note{font-size:14px;color:var(--mut);margin-top:10px}
 @media(max-width:860px){.grid{grid-template-columns:1fr}aside{position:static}
@@ -40,7 +43,11 @@ button.g{background:#fff;color:var(--ink);border:1px solid #bfc7d0;margin-top:8p
 <div class="row"><div><label for="name">Название компании или ФИО ИП</label><input id="name" autocomplete="off"></div>
 <div><label for="inn">ИНН</label><input id="inn" inputmode="numeric" autocomplete="off"></div>
 <div><label for="person">Контактное лицо</label><input id="person" autocomplete="off"></div>
-<div><label for="mail">E-mail</label><input id="mail" type="email" autocomplete="off"></div></div></section>
+<div><label for="mail">E-mail</label><input id="mail" type="email" autocomplete="off"></div>
+<div><label for="tel">Телефон</label><input id="tel" type="tel" inputmode="tel" placeholder="+7" autocomplete="off"></div>
+<div><label for="msg">Мессенджер на этом номере</label><select id="msg"></select></div></div>
+<div style="position:absolute;left:-9999px" aria-hidden="true"><input id="hp" name="hp_field" tabindex="-1" autocomplete="off"></div>
+<p class="note">* — обязательные поля</p></section>
 <section class="card"><h2>Параметры бизнеса</h2>
 <label for="type">Кто вы</label><select id="type"></select>
 <div id="actw"><label for="act">Чем занимаетесь</label><select id="act"></select></div>
@@ -63,10 +70,11 @@ button.g{background:#fff;color:var(--ink);border:1px solid #bfc7d0;margin-top:8p
 <aside id="sum"><section class="card"><h2>Ваш расчёт</h2><div id="lines"></div>
 <div class="tot"><span>Ежемесячная стоимость</span><strong id="m"></strong></div>
 <div class="tot y"><span>За 12 месяцев</span><strong id="y"></strong></div>
+<div class="agr"><input type="checkbox" id="agree"><label for="agree">Я согласен(на) на обработку персональных данных в соответствии с <a href="https://vipbuch.ru/privacy" target="_blank" rel="noopener">Политикой конфиденциальности</a></label></div>
 <button id="pdf">Скачать КП в PDF</button><button class="g" id="rst">Сбросить</button>
 <p class="note" id="st" aria-live="polite"></p>
 <p class="note">Цены без НДС. Стоимость обработки операций зависит от их фактического числа и пересчитывается при изменении параметров.</p>
-<p class="note" style="margin-top:14px">Условия оказания услуг — в <a href="https://vipbuch.ru/oferta" target="_blank" rel="noopener">публичной оферте</a>.</p>
+<p class="note" style="margin-top:14px">Условия оказания услуг — в <a href="https://vipbuch.ru/oferta" target="_blank" rel="noopener">оферте</a>.</p>
 </section></aside></div>
 <script>
 // ===== ТАРИФЫ (лист «Тариф 2026-2027») — правьте цены здесь =====
@@ -325,6 +333,15 @@ const CONF = {
  "mail": "director@house0fbusiness.ru",
  "site": "https://vipbuch.ru/",
  "validDays": 14,
+ "policyUrl": "https://vipbuch.ru/privacy",
+ "sheetUrl": "https://script.google.com/macros/s/AKfycbwyINSGXIYCo71jKsLTn5tBatx_jWPjtUD-A40F_oGeqxBUx0mapgihzVyHfge5XkAb/exec",
+ "consent": "Нажимая «Скачать КП», вы соглашаетесь на обработку введённых данных для подготовки предложения и связи с вами.",
+ "messengers": [
+  "Telegram",
+  "WhatsApp",
+  "MAX",
+  "Нет, только звонок"
+ ],
  "included": [
   "экспресс-проверку учетной базы Заказчика (без сверки данных с первичными документами)",
   "выполнение учетных процедур и расчетов в бухгалтерском и налоговом учете",
@@ -369,6 +386,7 @@ var vfs = {
 const T=TARIFF,C=CONF,$=s=>document.querySelector(s),R=n=>n.toLocaleString('ru-RU')+' ₽';
 const tp=(p,n)=>{n=Math.max(1,+n||1);for(const[m,c]of p.tiers)if(n<=m)return c;return p.over?p.over.base+p.over.per*(n-p.over.from):null};
 const opts=(el,a)=>{const v=el.value;el.innerHTML=a.map(x=>`<option>${x}</option>`).join('');if(a.includes(v))el.value=v};
+$('#msg').innerHTML='<option value="">Выберите</option>'+C.messengers.map(x=>`<option>${x}</option>`).join('');
 $('#type').innerHTML=T.types.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
 $('#pk').innerHTML=T.pkgs.map(p=>`<div class="pkg"><label class="head"><input type="checkbox" id="c_${p.id}"> ${p.title}</label><div hidden id="b_${p.id}"><label for="n_${p.id}">${p.unit}</label><input type="number" min="1" value="1" id="n_${p.id}"></div></div>`).join('');
 function fill(){const ty=T.types.find(t=>t.id==$('#type').value),a=Object.keys(ty.acts);
@@ -390,8 +408,9 @@ function render(){const{L,sum}=calc();
  $('#lines').innerHTML=L.map(l=>`<div class="line"><span>${l[0]}<small>${l[1]}</small></span><b>${R(l[2])}</b></div>`).join('');
  $('#m').textContent=$('#bm').textContent=R(sum);$('#y').textContent=R(sum*12)}
 ['input','change'].forEach(ev=>document.addEventListener(ev,e=>['type','act','reg'].includes(e.target.id)?fill():render()));
-$('#rst').onclick=()=>{document.querySelectorAll('input').forEach(i=>{i.type=='checkbox'||i.type=='radio'?i.checked=i.value==='':i.value=i.type=='number'?(/^(n_|emp)/.test(i.id)?1:0):''});$('#type').selectedIndex=0;fill()};
+$('#rst').onclick=()=>{document.querySelectorAll('input').forEach(i=>{i.type=='checkbox'||i.type=='radio'?i.checked=i.value==='':i.value=i.type=='number'?(/^(n_|emp)/.test(i.id)?1:0):''});$('#type').selectedIndex=0;$('#msg').selectedIndex=0;document.querySelectorAll('.err').forEach(e=>e.textContent='');document.querySelectorAll('.bad').forEach(e=>e.classList.remove('bad'));$('#st').textContent='';fill()};
 $('#pdf').onclick=()=>{
+ if(!validate())return;
  const{L,sum}=calc(),F=n=>n.toLocaleString('ru-RU').replace(/[\u00a0\u202f]/g,' ')+' руб.',d=new Date(),ds=d.toLocaleDateString('ru-RU'),
  till=new Date(d.getTime()+C.validDays*864e5).toLocaleDateString('ru-RU'),p2=n=>String(n).padStart(2,'0'),
  num='КП-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes()),
@@ -420,9 +439,31 @@ $('#pdf').onclick=()=>{
  {unbreakable:true,stack:[{text:'Как начать сотрудничество',bold:true,color:acc,fontSize:12,margin:[0,0,0,3]},{ul:C.steps,margin:[0,0,0,10]}]},
  {text:'Ждем Ваше письмо и рады, что Вы выбираете именно нас!',italics:true},
  {text:'С уважением к Вам и Вашему делу,\nЕлена Ретунская\nРуководитель компании ДОМ БИЗНЕСА\n'+C.phone,margin:[0,6,0,0]}]};
+ if(C.sheetUrl){try{fetch(C.sheetUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({date:ds+' '+p2(d.getHours())+':'+p2(d.getMinutes()),num,name:g('#name'),inn:g('#inn'),person:g('#person'),tel:g('#tel'),messenger:$('#msg').value,mail:g('#mail'),params:par,lines:L.map(l=>l[0]+' — '+l[1]+' — '+l[2]+' руб.').join('; '),month:sum,year:sum*12})}).catch(()=>{})}catch(e){}}
  const fn='КП_'+(g('#name').replace(/[\\\/:*?"<>|]/g,'').trim()||'Дом_Бизнеса')+'.pdf',st=$('#st');st.textContent='Формирую PDF…';
  try{pdfMake.createPdf(dd).getBlob(bl=>{const u=URL.createObjectURL(bl),a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();
   st.innerHTML='Готово: '+fn+'. Если файл не появился в загрузках — <a href="'+u+'" download="'+fn+'" target="_blank">нажмите здесь</a>.'})}
  catch(e){st.textContent='Не удалось создать PDF: '+e.message}};
+
+const WL=/[а-яёa-z]/gi,JUNK=w=>/(.)\1{3,}/i.test(w)||/[бвгджзйклмнпрстфхцчшщbcdfghjklmnpqrstvwxz]{6,}/i.test(w)||(w.replace(/[^а-яёa-z]/gi,'').length>=4&&!/[аеёиоуыэюяaeiouy]/i.test(w)),
+ bad=t=>t.split(/[\s"«»().,\-]+/).some(JUNK),
+ innOk=v=>{if(!/^\d+$/.test(v))return false;const d=[...v].map(Number),k=(c)=>c.reduce((a,x,i)=>a+x*d[i],0)%11%10;
+  if(v.length==10)return k([2,4,10,3,5,9,4,6,8])==d[9];if(v.length==12)return k([7,2,4,10,3,5,9,4,6,8])==d[10]&&k([3,7,2,4,10,3,5,9,4,6,8])==d[11];return false},
+ FV={name:v=>(v.match(WL)||[]).length<2?'Введите название компании или ФИО':bad(v)?'Проверьте, пожалуйста, название':'',
+ inn:v=>{v=v.replace(/\s/g,'');const n=$('#type').value=='ip'?12:10;return v.length!=n?(n==12?'ИНН индивидуального предпринимателя — 12 цифр':'ИНН организации — 10 цифр'):innOk(v)?'':'ИНН введён неверно, проверьте цифры'},
+ person:v=>!/^[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё.\-' ]*$/.test(v)||(v.match(WL)||[]).length<2?'Введите имя контактного лица':bad(v)?'Проверьте, пожалуйста, имя':'',
+ mail:v=>/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(v)?'':'Введите e-mail, например name@mail.ru',
+ tel:(v,el)=>{let d=v.replace(/\D/g,'');if(d.length==10&&d[0]=='9')d='7'+d;if(d.length==11&&d[0]=='8')d='7'+d.slice(1);
+  if(d.length!=11||d[0]!='7'||/(\d)\1{5,}/.test(d.slice(1)))return'Введите номер телефона, например +7 900 123-45-67';
+  el.value='+7 '+d.slice(1,4)+' '+d.slice(4,7)+'-'+d.slice(7,9)+'-'+d.slice(9);return''},
+ msg:v=>v?'':'Выберите мессенджер'};
+function setErr(id,m){const el=$('#'+id);let e=document.getElementById('e_'+id);if(!e){e=document.createElement('div');e.className='err';e.id='e_'+id;e.setAttribute('role','alert');el.parentElement.appendChild(e)}e.textContent=m;el.classList.toggle('bad',!!m)}
+function validate(){if($('#hp').value)return false;let first=null;
+ for(const[id,f]of Object.entries(FV)){const el=$('#'+id),m=f(el.value.trim(),el);setErr(id,m);if(m&&!first)first=el}
+ const ok=$('#agree').checked;setErr('agree',ok?'':'Нужно ваше согласие');if(!ok&&!first)first=$('#agree');
+ if(first){first.focus();$('#st').textContent='Проверьте поля, отмеченные красным.';return false}
+ $('#st').textContent='';return true}
+['input','change'].forEach(ev=>document.addEventListener(ev,e=>{if(e.target.id&&document.getElementById('e_'+e.target.id))setErr(e.target.id,'')}));
+['name','inn','person','mail','tel','msg'].forEach(id=>{const l=document.querySelector('label[for='+id+']');if(l)l.insertAdjacentHTML('beforeend',' <span style="color:#b3261e">*</span>')});
 fill();
 </script></body></html>
